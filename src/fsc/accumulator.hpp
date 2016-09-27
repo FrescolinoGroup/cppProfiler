@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <iostream>
 
-namespace util {
+namespace fsc {
     template <typename T>
     class accumulator {
         using mean_type = decltype((T() + T()) / double());
@@ -59,6 +59,6 @@ namespace util {
         os.precision(p);
         return os;
     }
-}  // end namespace util
+}  // end namespace fsc
 
 #endif  // UTIL_ACCUMULATOR_HEADER

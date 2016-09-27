@@ -8,7 +8,7 @@
 #include <chrono>
 #include <iostream>
 
-namespace util {
+namespace fsc {
     namespace detail {
         struct rdtsc_struct {
             double cycle() const { return (uint64_t(hi) << 32) + lo; }
@@ -81,6 +81,6 @@ namespace util {
         os << "time measured with high res clock: " << arg.sec() << " seconds";
         return os;
     }
-}  // end namespace util
+}  // end namespace fsc
 
 #endif  // UTIL_RDTSC_TIMER_HEADER
