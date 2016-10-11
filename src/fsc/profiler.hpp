@@ -9,8 +9,8 @@
 #ifndef UTIL_PROFILER_HEADER
 #define UTIL_PROFILER_HEADER
 
-#include "rdtsc_timer.hpp"
-#include "accumulator.hpp"
+#include <fsc/profiler/rdtsc_timer.hpp>
+#include <fsc/profiler/accumulator.hpp>
 
 #include <assert.h>
 #include <iostream>
@@ -249,7 +249,7 @@ namespace fsc {
 } // end namespace fsc
 
 //=================== macro/MTP tag system ===================
-#include <fsc/generic_macros.hpp>
+#include <fsc/profiler/generic_macros.hpp>
 
 namespace fsc {
     namespace detail {
