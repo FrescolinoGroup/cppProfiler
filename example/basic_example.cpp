@@ -22,7 +22,7 @@ int main() {
         std::vector<double> a(100);
 
         MIB_NEXT(a, b)
-        std::cout << a << std::endl;
+        //~ std::cout << a << std::endl;
         MIB_STOP(b)
     }
     MIB_STOP(main)

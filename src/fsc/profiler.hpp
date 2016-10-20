@@ -13,6 +13,7 @@
 #include <fsc/profiler/rdtsc_timer.hpp>
 
 #include <assert.h>
+#include <algorithm>
 #include <fstream>
 #include <functional>
 #include <iomanip>
@@ -23,6 +24,9 @@
 #include <stdexcept>
 #include <vector>
 
+// We can use MIB_DEBUG to catch common errors like stopping the wrong tag
+// or violating the unique name constraint
+
 #ifdef MIB_TAGS
 #define MIB_REGISTER_MODE
 // make sure the user also specifies MIB_TEST
@@ -31,10 +35,10 @@
 #endif
 #endif
 
-// todo: force inline -> see no_macros_branch
-
 namespace fsc {
     namespace detail {
+        enum class msm_mod : uint8_t { cycle = 0, nsec = 1 };
+
         struct node_struct {
             using res_type = double;
             using pair_type = std::pair<res_type, res_type>;
@@ -43,8 +47,23 @@ namespace fsc {
             std::string name;
             node_struct* parent;
             pair_type current_run;
+
+            res_type cost(msm_mod const& mod) const {
+                return acc[int(mod)].mean() * acc[int(mod)].count();
+            }
+            void sort(msm_mod const& mod) {
+                std::sort(
+                    children.begin(), children.end(),
+                    [&mod](detail::node_struct* a, detail::node_struct* b) {
+                        return a->cost(mod) > b->cost(mod);
+                    });
+                for(auto& c : children) {
+                    c->sort(mod);
+                }
+            }
+
             accumulator<res_type> acc[2];
-            std::set<node_struct*> children;
+            std::vector<node_struct*> children;
         };
 
         inline rdtsc_timer& get_timer() {
@@ -79,27 +98,30 @@ namespace fsc {
             std::cout << "Usage of rdtsc (CPU bound):" << std::endl;
             std::vector<bool> marker;
             std::string msm_mod_str =
-                mod_ == msm_mod::cycle ? "cycle_mean" : "nsec_mean";
+                mod_ == detail::msm_mod::cycle ? "cycle_mean" : "nsec_mean";
             std::cout << std::setw(8 + 14) << "┬ (% of parent) name"
                       << std::string(80 - 53, ' ') << std::right
                       << std::setw(10) << msm_mod_str << std::setw(10 + 1)
                       << "spread" << std::setw(10) << "run_cnt" << std::endl;
             auto i = sentinel_.children.size();
             auto mod = int(mod_);
+
             for(auto const& p : sentinel_.children) {
                 --i;
                 print_tree_helper(p, i == 0, marker,
                                   mod ? sentinel_.current_run.second
                                       : sentinel_.current_run.first,
-                                  p->acc[mod].mean() * p->acc[mod].count());
+                                  p->cost(mod_));
             }
             std::cout.precision(prec);
         }
-        void set_mod(std::string const& smod = "cycle") {
+        void set_mod(std::string const& smod) {
+            sentinel_.sort(mod_);
+
             if(smod == "cycle")
-                mod_ = fsc::profiler::msm_mod::cycle;
-            else if(smod == "nsec")
-                mod_ = fsc::profiler::msm_mod::nsec;
+                mod_ = detail::msm_mod::cycle;
+            else if(smod == "nsec" or smod == "")
+                mod_ = detail::msm_mod::nsec;
             else {
                 std::stringstream ss;
                 ss << "fsc::profiler: invalid mode '" << smod << "'";
@@ -140,7 +162,8 @@ namespace fsc {
             }
             std::ofstream ofs(file);
 
-            std::string smod = mod_ == msm_mod::cycle ? "cycle" : "nsec";
+            std::string smod =
+                mod_ == detail::msm_mod::cycle ? "cycle" : "nsec";
             ofs << "parent name " << smod << "_mean " << smod << "_std calls"
                 << std::endl;
             auto mod = int(mod_);
@@ -166,12 +189,24 @@ namespace fsc {
             return pair_type(cyc, nsec);
         }
         void process_start(std::string const& name, pair_type const& msm) {
+#ifdef MIB_DEBUG
             if(name.find(" ") != std::string::npos) {
                 std::stringstream ss;
                 ss << "fsc::profiler: name '" << name
                    << "' invalid! no spaces allowed";
                 throw std::runtime_error(ss.str());
             }
+            if(find_if(stack_.begin(), stack_.end(),
+                       [&name](detail::node_struct* XX) {
+                           return XX->name == name;
+                       }) != stack_.end()) {
+                std::stringstream ss;
+                ss << "fsc::profiler: the tag '" << name
+                   << "' was started a while still active. The tags have to be "
+                      "unique!";
+                throw std::runtime_error(ss.str());
+            }
+#endif  // MIB_DEBUG
 
             static bool first_start = true;
             if(first_start)
@@ -185,15 +220,22 @@ namespace fsc {
             tree_[name].name = name;
             tree_[name].parent = stack_.back();
             stack_.push_back(&tree_[name]);
-            tree_[name].parent->children.insert(&tree_[name]);
+            if(std::find(tree_[name].parent->children.begin(),
+                         tree_[name].parent->children.end(),
+                         &tree_[name]) == tree_[name].parent->children.end())
+                tree_[name].parent->children.push_back(&tree_[name]);
         }
         void process_stop(std::string const& name, pair_type const& msm) {
+#ifdef MIB_DEBUG
             if(name != stack_.back()->name) {
                 std::stringstream ss;
                 ss << "fsc::profiler: stopped '" << name << "' instead of '"
                    << stack_.back()->name << "'";
                 throw std::runtime_error(ss.str());
             }
+#else
+            (void)name;  // removes unused warning
+#endif  // MIB_DEBUG
 
             for(auto ptr : stack_) {
                 ptr->current_run.first += msm.first;
@@ -234,11 +276,27 @@ namespace fsc {
                       << std::endl;
             auto i = parent->children.size();
             marker.push_back(lastchild);
+
+            res_type child_cost = 0;
             for(auto const& p : parent->children) {
                 --i;
-                print_tree_helper(
-                    p, i == 0, marker, self_time,
-                    int64_t(p->acc[mod].mean() * p->acc[mod].count()));
+                child_cost += p->cost(mod_);
+                print_tree_helper(p, i == 0, marker, self_time,
+                                  int64_t(p->cost(mod_)));
+            }
+            if(parent->children.size()) {
+                uint missing = (1 - child_cost / self_time) * 100;
+                if(missing != 0) {
+                    for(auto c : marker) {
+                        if(!c) {
+                            std::cout << "│" << std::string(4 - 1, ' ');
+
+                        } else
+                            std::cout << std::string(4, ' ');
+                    }
+                    std::cout << "  " << std::setw(3) << missing << "% missing"
+                              << std::endl;
+                }
             }
             marker.pop_back();
         }
@@ -247,8 +305,7 @@ namespace fsc {
         rdtsc_timer& timer_;
 
     private:
-        enum class msm_mod : uint8_t { cycle = 0, nsec = 1 };
-        msm_mod mod_ = msm_mod::cycle;
+        detail::msm_mod mod_ = detail::msm_mod::cycle;
 
         detail::node_struct sentinel_;
         std::vector<detail::node_struct*> stack_;
