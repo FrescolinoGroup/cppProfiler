@@ -14,6 +14,7 @@
 
 #include <assert.h>
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include <functional>
 #include <iomanip>
@@ -186,6 +187,7 @@ namespace fsc {
             timer_.start();
             timer_.stop();
             cyc -= timer_.cycles();
+            //~ nsec -= timer_.nsec();
             return pair_type(cyc, nsec);
         }
         void process_start(std::string const& name, pair_type const& msm) {
