@@ -448,9 +448,6 @@ MIB_TEST_IMPL(MIB_TEST)
 
 #endif
 
-// this only depends on the impl of start and stop
-#define MIB_NEXT(tag1, tag2) MIB_STOP(tag1) MIB_START(tag2)
-
 #define MIB_SAVE(mod, file)              \
     fsc::detail::mib_prof.set_mod(#mod); \
     fsc::detail::mib_prof.save(#file);  //
@@ -473,5 +470,8 @@ MIB_TEST_IMPL(MIB_TEST)
 #endif  // NMIB_SILENT
 
 #endif  // NMIB
+
+// this only depends on the impl of start and stop
+#define MIB_NEXT(tag1, tag2) MIB_STOP(tag1) MIB_START(tag2)
 
 #endif  // FSC_PROFILER_HEADER
