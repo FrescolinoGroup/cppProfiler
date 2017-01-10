@@ -46,6 +46,7 @@ install:
     - cmake .. -DCMAKE_MODULE_PATH=$INCLUDE -DCMAKE_CXX_COMPILER=$COMPILER
     - make
 
+
 # run test
 script:
     - make test
