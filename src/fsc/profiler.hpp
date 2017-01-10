@@ -291,7 +291,7 @@ private:
 
     void print_missing_helper(double const& child_cost, double const& self_time,
                               std::vector<bool> const& marker) const {
-        int missing = std::round((1 - child_cost / self_time) * 100);
+        int missing = int(std::round((1 - child_cost / self_time) * 100));
         if(missing != 0) {
             for(auto c : marker) {
                 if(!c) {
