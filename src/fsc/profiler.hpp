@@ -265,7 +265,7 @@ private:
         std::cout << (lastchild ? "└" : "├") << "─" << std::setw(3)
                   << int(std::round(100 * self_time / parent_time)) << "% "
                   << std::left << std::setw(12) << parent->name << std::right
-                  << std::string(whitespace, ' ') << std::fixed << "["
+                  << std::string(uint(whitespace), ' ') << std::fixed << "["
                   << std::setw(10)
                   << std::setprecision(parent->acc[mod].mean() < 10 ? 1 : 0)
                   << parent->acc[mod].mean() << std::setw(10)

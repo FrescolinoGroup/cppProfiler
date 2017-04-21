@@ -15,7 +15,7 @@ enable_testing()
 set(FSC_WEBSITE ${PROJECT_SOURCE_DIR}/../../website/frescolino)
 
 # if additional cmake modules are needed
-list(APPEND CMAKE_MODULE_PATH 
+list(APPEND CMAKE_MODULE_PATH
     /usr/include /usr/local/include
     ~/.local/include ${PROJECT_SOURCE_DIR}/../cmake_extensions)
 
@@ -24,7 +24,7 @@ include(fsc/uninstall)
 
 # flags
 if(CMAKE_CXX_COMPILER_ID MATCHES "(C|c?)lang")
-    set(CMAKE_CXX_FLAGS "-std=c++1z -O3 -march=native -Werror -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-missing-prototypes -Wno-exit-time-destructors -Wno-global-constructors -Wno-implicit-fallthrough -Wno-disabled-macro-expansion -Wno-documentation-unknown-command -Wno-missing-braces -Wno-documentation -Wno-shorten-64-to-32")
+    set(CMAKE_CXX_FLAGS "-std=c++1z -O3 -march=native -Werror -Weverything -Wno-padded -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-missing-prototypes -Wno-exit-time-destructors -Wno-global-constructors -Wno-implicit-fallthrough -Wno-disabled-macro-expansion -Wno-documentation-unknown-command -Wno-missing-braces -Wno-documentation -Wno-shorten-64-to-32")
 else()
     set(CMAKE_CXX_FLAGS "-std=c++1z -O3 -march=native -Werror -Wall -Wextra -Wpedantic")
 endif()
