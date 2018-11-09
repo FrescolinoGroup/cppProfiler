@@ -10,55 +10,61 @@
 #include <iostream>
 
 namespace fsc {
-    template <typename T>
-    class accumulator {
-        using mean_type = decltype((T() + T()) / double());
-        using count_type = uint64_t;
+template <typename T>
+class accumulator {
+    using mean_type = decltype((T() + T()) / double());
+    using count_type = uint64_t;
 
-    public:
-        //------------------- structors -------------------
-        accumulator() : n_(), sum_(), sum2_() {}
-        //------------------- methods -------------------
-        inline void operator<<(T const& val) {
-            ++n_;
-            sum_ += val;
-            sum2_ += val * val;
-        }
-        inline void clear() {
-            n_ = 0;
-            sum_ = 0;
-            sum2_ = 0;
-        }
-        //-------------------const methods -------------------
-        inline mean_type mean() const { return mean_type(sum_) / n_; }
-        inline mean_type dev() const {
-            using std::sqrt;
-            using std::abs;
-            mean_type sc0 = n_ - 1;
-            return sqrt(abs(sum2_ / sc0 - sum_ * sum_ / sc0 / n_));
-        }
-        inline mean_type std() const {
-            using std::sqrt;
-            return dev() / sqrt(n_);
-        }
-        inline count_type const& count() const { return n_; }
-        inline T const& sum() const { return sum_; }
-
-    private:
-        count_type n_;
-        T sum_;
-        T sum2_;
-    };
-
-    template <typename T>
-    inline std::ostream& operator<<(std::ostream& os,
-                                    accumulator<T> const& acc) {
-        std::streamsize p = os.precision();
-        os << acc.mean() << " +/- " << std::setprecision(3)
-           << (100 * acc.std() / acc.mean()) << "% (n = " << acc.count() << ")";
-        os.precision(p);
-        return os;
+public:
+    //------------------- structors -------------------
+    accumulator() : n_(), sum_(), sum2_() {}
+    //------------------- methods -------------------
+    inline void operator<<(T const& val) {
+        ++n_;
+        sum_ += val;
+        sum2_ += val * val;
     }
+    inline void clear() {
+        n_ = 0;
+        sum_ = 0;
+        sum2_ = 0;
+    }
+    //-------------------const methods -------------------
+    inline mean_type mean() const { return mean_type(sum_) / n_; }
+    inline mean_type dev() const {
+        using std::abs;
+        using std::sqrt;
+        mean_type sc0 = n_ - 1;
+        return sqrt(abs(sum2_ / sc0 - sum_ * sum_ / sc0 / n_));
+    }
+    inline mean_type std() const {
+        using std::sqrt;
+        return dev() / sqrt(n_);
+    }
+    inline count_type const& count() const { return n_; }
+    inline T const& sum() const { return sum_; }
+
+    accumulator& operator+=(accumulator const& rhs) {
+        n_ += rhs.n_;
+        sum_ += rhs.sum_;
+        sum2_ += rhs.sum2_;
+        return (*this);
+    }
+
+private:
+    count_type n_;
+    T sum_;
+    T sum2_;
+};
+
+template <typename T>
+inline std::ostream& operator<<(std::ostream& os, accumulator<T> const& acc) {
+    std::streamsize p = os.precision();
+    os << acc.mean() << " +/- " << std::setprecision(3)
+       << (100 * acc.std() / acc.mean()) << "% (n = " << acc.count() << ")";
+    os.precision(p);
+    return os;
+}
 }  // end namespace fsc
 
 #endif  // UTIL_ACCUMULATOR_HEADER
